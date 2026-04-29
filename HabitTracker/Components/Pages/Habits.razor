@@ -1,0 +1,322 @@
+﻿@page "/"
+@page "/habits"
+@rendermode InteractiveServer
+
+@using HabitTracker.Models
+@using HabitTracker.Services
+@using Microsoft.AspNetCore.Components.Web
+
+@inject HabitService HabitService
+
+<h1>Habit Tracker</h1>
+
+<!-- Today's Progress  -->
+<div class="card p-3 mb-3">
+
+    <h4>Today's Progress</h4>
+
+    <p>
+        @GetTodayCompleted() / @GetTotalHabits() habits completed
+        (@Math.Round(GetTodayProgress())%)
+    </p>
+
+    <div class="progress" style="height: 20px;">
+        <div class="progress-bar bg-success"
+             style="width: @GetTodayProgress()%">
+        </div>
+    </div>
+
+</div>
+
+<!-- Filter -->
+<div class="mb-3">
+    <select @bind="selectedCategory" class="form-control">
+        <option value="All">All Categories</option>
+        <option value="General">General</option>
+        <option value="Health">Health</option>
+        <option value="School">School</option>
+        <option value="Fitness">Fitness</option>
+        <option value="Productivity">Productivity</option>
+    </select>
+</div>
+
+<!-- Add Habit -->
+<div class="mb-3">
+    <input @bind="newName"
+           @onkeydown="HandleKey"
+           class="form-control"
+           placeholder="Habit name" />
+</div>
+
+<div class="mb-3">
+    <input @bind="newDescription"
+           class="form-control"
+           placeholder="Description" />
+</div>
+
+<div class="mb-3">
+    <select @bind="newCategory" class="form-control">
+        <option value="General">General</option>
+        <option value="Health">Health</option>
+        <option value="School">School</option>
+        <option value="Fitness">Fitness</option>
+        <option value="Productivity">Productivity</option>
+    </select>
+</div>
+
+<button class="btn btn-primary"
+        @onclick="AddHabit"
+        disabled="@string.IsNullOrWhiteSpace(newName)">
+    Add Habit
+</button>
+
+<hr />
+
+@if (FilteredHabits.Count == 0)
+{
+    <p>No habits found.</p>
+}
+else
+{
+    @foreach (var habit in FilteredHabits)
+    {
+        <div class="card p-3 m-2">
+
+            @if (editingHabitId == habit.Id)
+            {
+                <!-- EDIT MODE -->
+
+                <input @bind="editName" class="form-control mb-2" />
+                <input @bind="editDescription" class="form-control mb-2" />
+
+                <select @bind="editCategory" class="form-control mb-2">
+                    <option value="General">General</option>
+                    <option value="Health">Health</option>
+                    <option value="School">School</option>
+                    <option value="Fitness">Fitness</option>
+                    <option value="Productivity">Productivity</option>
+                </select>
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-success"
+                            @onclick="() => SaveEdit(habit.Id)">
+                        Save
+                    </button>
+
+                    <button class="btn btn-secondary"
+                            @onclick="CancelEdit">
+                        Cancel
+                    </button>
+                </div>
+            }
+            else
+            {
+                <!-- VIEW MODE -->
+
+                <h4>@habit.Name</h4>
+                <p>@habit.Description</p>
+                <p>
+                    <strong>Category:</strong>
+                    <span style="
+                    background-color: @GetCategoryColor(habit.Category);
+                    color: white;
+                    padding: 4px 8px;
+                    border-radius: 6px;
+                ">
+                        @habit.Category
+                    </span>
+                </p>
+                <p> Streak: @habit.Streak</p>
+
+                <!-- Weekly Tracker -->
+                <p class="mb-1"><strong>This Week</strong></p>
+
+                <div class="d-flex gap-2 mt-2">
+                    @foreach (var day in GetWeekDays())
+                    {
+                        bool completed = habit.CompletedDates.Any(d => d.Date == day);
+
+                        <div style="
+                                            width: 45px;
+                                            height: 45px;
+                                            border-radius: 8px;
+                                            display: flex;
+                                            align-items: center;
+                                            justify-content: center;
+                                            font-size: 12px;
+                                            background-color: @(completed ? "#28a745" : "#dee2e6");
+                                            color: @(completed ? "white" : "black");
+                                        ">
+                            @day.ToString("ddd")
+                        </div>
+                    }
+                </div>
+
+                <!-- Progress -->
+                <div class="mt-3">
+                    <p class="mb-1">
+                        <strong>Weekly Progress:</strong>
+                        @GetWeeklyCompleted(habit)/7 days
+                        (@Math.Round(GetWeeklyProgress(habit))%)
+                    </p>
+
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar @(GetWeeklyProgress(habit) == 100 ? "bg-success" : "bg-primary")"
+                             style="width: @GetWeeklyProgress(habit)%">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="d-flex gap-2 mt-3">
+                    <button class="btn btn-success"
+                            disabled="@IsCompletedToday(habit)"
+                            @onclick="() => Complete(habit.Id)">
+                        @(IsCompletedToday(habit) ? "Done Today ✅" : "Complete")
+                    </button>
+
+                    <button class="btn btn-warning"
+                            @onclick="() => StartEdit(habit)">
+                        Edit
+                    </button>
+
+                    <button class="btn btn-danger"
+                            @onclick="() => Delete(habit.Id)">
+                        Delete
+                    </button>
+                </div>
+            }
+
+        </div>
+    }
+}
+
+@code {
+    List<Habit> habits = new();
+
+    string newName = "";
+    string newDescription = "";
+    string newCategory = "General";
+
+    string selectedCategory = "All";
+
+    // Editing state
+    Guid? editingHabitId = null;
+    string editName = "";
+    string editDescription = "";
+    string editCategory = "General";
+
+    protected override void OnInitialized()
+    {
+        habits = HabitService.GetHabits();
+    }
+
+    List<Habit> FilteredHabits =>
+        habits.Where(h => selectedCategory == "All" || h.Category == selectedCategory).ToList();
+
+    void HandleKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            AddHabit();
+        }
+    }
+
+    void AddHabit()
+    {
+        HabitService.AddHabit(newName, newDescription, newCategory);
+        habits = HabitService.GetHabits();
+
+        newName = "";
+        newDescription = "";
+        newCategory = "General";
+    }
+
+    void Complete(Guid id)
+    {
+        HabitService.CompleteHabit(id);
+        habits = HabitService.GetHabits();
+    }
+
+    void Delete(Guid id)
+    {
+        HabitService.DeleteHabit(id);
+        habits = HabitService.GetHabits();
+    }
+
+    void StartEdit(Habit habit)
+    {
+        editingHabitId = habit.Id;
+        editName = habit.Name;
+        editDescription = habit.Description;
+        editCategory = habit.Category;
+    }
+
+    void SaveEdit(Guid id)
+    {
+        HabitService.UpdateHabit(id, editName, editDescription, editCategory);
+        habits = HabitService.GetHabits();
+        editingHabitId = null;
+    }
+
+    void CancelEdit()
+    {
+        editingHabitId = null;
+    }
+
+    bool IsCompletedToday(Habit habit)
+    {
+        return habit.CompletedDates.Any(d => d.Date == DateTime.UtcNow.Date);
+    }
+
+    List<DateTime> GetWeekDays()
+    {
+        var today = DateTime.UtcNow.Date;
+        int diff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
+        var monday = today.AddDays(-diff);
+
+        return Enumerable.Range(0, 7)
+            .Select(i => monday.AddDays(i))
+            .ToList();
+    }
+
+    int GetWeeklyCompleted(Habit habit)
+    {
+        return GetWeekDays().Count(day =>
+            habit.CompletedDates.Any(d => d.Date == day));
+    }
+
+    double GetWeeklyProgress(Habit habit)
+    {
+        return GetWeeklyCompleted(habit) / 7.0 * 100;
+    }
+
+    string GetCategoryColor(string category)
+    {
+        return category switch
+        {
+            "Health" => "#28a745",
+            "Fitness" => "#007bff",
+            "School" => "#ffc107",
+            "Productivity" => "#6f42c1",
+            _ => "#6c757d"
+        };
+    }
+
+    int GetTodayCompleted()
+    {
+        return habits.Count(h =>
+            h.CompletedDates.Any(d => d.Date == DateTime.UtcNow.Date));
+    }
+
+    int GetTotalHabits()
+    {
+        return habits.Count;
+    }
+
+    double GetTodayProgress()
+    {
+        if (habits.Count == 0) return 0;
+        return GetTodayCompleted() / (double)habits.Count * 100;
+    }
+}

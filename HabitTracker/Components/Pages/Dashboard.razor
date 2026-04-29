@@ -1,0 +1,23 @@
+﻿@using HabitTracker.Services
+@using HabitTracker.Models
+
+@page "/dashboard"
+@inject HabitService HabitService
+
+<h1>Dashboard</h1>
+
+<p>Total Habits: @habits.Count</p>
+
+<p>Total Streak: @TotalStreak</p>
+
+@code {
+
+    List<HabitTracker.Models.Habit> habits = new();
+
+    int TotalStreak => habits.Sum(h => h.Streak);
+
+    protected override void OnInitialized()
+    {
+        habits = HabitService.GetHabits();
+    }
+}
