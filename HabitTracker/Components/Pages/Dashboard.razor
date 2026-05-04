@@ -1,23 +1,111 @@
-﻿@using HabitTracker.Services
+﻿@page "/dashboard"
+
+@using HabitTracker.Services
 @using HabitTracker.Models
 
-@page "/dashboard"
-@inject HabitService HabitService
+@inject IHabitService HabitService
 
-<h1>Dashboard</h1>
+<h1 class="mb-4">Dashboard</h1>
 
-<p>Total Habits: @habits.Count</p>
+@if (habits == null)
+{
+    <p>Loading...</p>
+}
+else if (!habits.Any())
+{
+    <p>No habits yet. Start tracking to see your progress!</p>
+}
+else
+{
+    <!-- Summary Cards -->
+    <div class="row mb-4">
 
-<p>Total Streak: @TotalStreak</p>
+        <div class="col-md-4">
+            <div class="card p-3 shadow-sm">
+                <h5>Total Habits</h5>
+                <h2>@habits.Count</h2>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card p-3 shadow-sm">
+                <h5>Total Streak</h5>
+                <h2>@TotalStreak</h2>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card p-3 shadow-sm">
+                <h5>Completed Today</h5>
+                <h2>@todayCompleted / @habits.Count</h2>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Today Progress -->
+    <div class="card p-3 mb-4 shadow-sm">
+        <h4>Today's Progress</h4>
+
+        <p>
+            @todayCompleted / @habits.Count habits completed
+            (@Math.Round(todayProgress)%)
+        </p>
+
+        <div class="progress" style="height: 20px;">
+            <div class="progress-bar bg-success"
+                 style="width: @todayProgress%">
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Habits -->
+    <div class="card p-3 shadow-sm">
+        <h4>Top Habits (by Streak)</h4>
+
+        <ul>
+            @foreach (var habit in TopHabits)
+            {
+                <li>
+                    <strong>@habit.Name</strong> — Streak: @habit.Streak
+                </li>
+            }
+        </ul>
+    </div>
+}
 
 @code {
+    private List<Habit> habits = new();
 
-    List<HabitTracker.Models.Habit> habits = new();
+    private int TotalStreak => habits.Sum(h => h.Streak);
 
-    int TotalStreak => habits.Sum(h => h.Streak);
+    private int todayCompleted =>
+        habits.Count(h => h.IsCompletedToday());
+
+    private double todayProgress =>
+        habits.Count == 0 ? 0 :
+        (todayCompleted / (double)habits.Count) * 100;
+
+    private List<Habit> TopHabits =>
+        habits.OrderByDescending(h => h.Streak)
+              .Take(3)
+              .ToList();
 
     protected override void OnInitialized()
     {
-        habits = HabitService.GetHabits();
+        LoadData();
+    }
+
+    private void LoadData()
+    {
+        try
+        {
+            habits = HabitService.GetHabits().ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading dashboard: {ex.Message}");
+            habits = new List<Habit>();
+        }
     }
 }
