@@ -71,7 +71,7 @@ dotnet test
 
 ## Technologies
 
-* C#, .NET 8
+* C#, .NET 9
 * Blazor Server
 * Bootstrap
 * System.Text.Json
