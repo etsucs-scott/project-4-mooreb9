@@ -1,43 +1,92 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/qJo95Bxr)
-# CSCI 1260 — Project
+# Habit Tracker (Blazor App)
 
-## Project Instructions
-All project requirements, grading criteria, and submission details are provided on **D2L**.  
-Refer to D2L as the *authoritative source* for this assignment.
+## Overview
 
-This repository is intentionally minimal. You are responsible for:
-- Creating the solution and projects
-- Designing the class structure
-- Implementing the required functionality
+A habit tracking web application built with **ASP.NET Core Blazor Server**. Users can create, manage, and track daily habits while viewing progress, streaks, and weekly performance.
 
 ---
 
-## Getting Started (CLI)
+## Features
 
-You may use **Visual Studio**, **VS Code**, or the **terminal**.
+* Add, edit, and delete habits
+* Mark habits as completed (once per day)
+* Automatic streak tracking
+* Daily and weekly progress visualization
+* Category filtering
+* Dashboard with summary metrics
 
-### Create a solution
+---
+
+## Design
+
+* **OOP Principles**: encapsulation, abstraction, separation of concerns
+* **Interface-based service**: `IHabitService`
+* **DTO (`HabitDto`)** used for safe JSON serialization
+
+---
+
+## Data Structures
+
+* `List<Habit>` for storage
+* `HashSet<DateTime>` for unique completion tracking
+
+---
+
+## Persistence
+
+* Data stored in `habits.json`
+* Uses `System.Text.Json` for serialization
+
+---
+
+## Exception Handling
+
+* Try/catch used in service and UI layers
+* Prevents crashes during file operations and updates
+
+---
+
+## Testing
+
+* Built with **xUnit**
+* 12+ unit tests covering:
+
+  * Habit logic (streaks, completion)
+  * Service operations
+
+Run tests:
+
 ```bash
-dotnet new sln -n ProjectName
+dotnet test
 ```
 
-### Create a project (example: console app)
+---
+
+## Platform
+
+* Cross-platform (Windows, macOS, Linux)
+* Built with .NET
+
+---
+
+## Technologies
+
+* C#, .NET 8
+* Blazor Server
+* Bootstrap
+* System.Text.Json
+* xUnit
+
+---
+
+## Run
+
 ```bash
-dotnet new console -n ProjectName.App
+dotnet run
 ```
 
-### Add the project to the solution
-```bash
-dotnet sln add ProjectName.App
-```
+---
 
-### Build and run
-```bash
-dotnet build
-dotnet run --project ProjectName.App
-```
+## Author
 
-## Notes
-- Commit early and commit often.
-- Your repository history is part of your submission.
-- Update this README with build/run instructions specific to your project.
+Benjamin Moore
